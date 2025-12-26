@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+SQLModel
+sqlalchemy
+psycopg2-binary
+requests
+msal
+python-dotenv
+python-dateutil
+pytest
+httpx
