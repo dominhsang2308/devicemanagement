@@ -12,4 +12,4 @@ elif page == "Inventory Management":
     # gọi hàm render_inventory() - chứa CRUD + assign + history
     render_inventory_page()
 else:
-    render_admin()
+    pass

@@ -11,7 +11,7 @@ class InventoryItem(SQLModel, table=True):
     item_type: Optional[str] = Field(default="device")  # device | accessory | license
     quantity: int = Field(default=0)
     location: Optional[str] = None
-    metadata: Optional[Dict] = Field(default_factory=dict, sa_column=Column(JSON))
+    metadata_: Optional[Dict] = Field(default_factory=dict, sa_column=Column(JSON))
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     version: int = Field(default=1, sa_column=Column(Integer, nullable=False))
@@ -22,7 +22,7 @@ class LicensePool(SQLModel, table=True):
     display_name: Optional[str] = None
     total: int = Field(default=0)
     allocated: int = Field(default=0)
-    metadata: Optional[Dict] = Field(default_factory=dict, sa_column=Column(JSON))
+    metadata_: Optional[Dict] = Field(default_factory=dict, sa_column=Column(JSON))
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 

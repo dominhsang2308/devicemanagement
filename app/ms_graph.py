@@ -39,7 +39,6 @@ def fetch_managed_devices() -> List[Dict]:
         url = payload.get("@odata.nextLink")
     return devices
 
-# Cached users fetch
 def _fetch_users_from_graph() -> List[Dict]:
     token = get_access_token()
     headers = {"Authorization": f"Bearer {token}"}
@@ -54,14 +53,8 @@ def _fetch_users_from_graph() -> List[Dict]:
     simplified = [{"id": u.get("id"), "displayName": u.get("displayName"), "userPrincipalName": u.get("userPrincipalName")} for u in users]
     return simplified
 
-# very small in-process TTL cache
-@lru_cache(maxsize=1)
+# in-process TTL cache
 def fetch_users_cached(ttl_seconds: int = 60) -> List[Dict]:
-    """
-    Returns cached users. Call with fetch_users_cached() to get list.
-    If TTL expired, refresh cache.
-    NOTE: lru_cache doesn't support TTL directly, so we maintain timestamps on function attr.
-    """
     now = int(time.time())
     if not hasattr(fetch_users_cached, "_cached_at"):
         fetch_users_cached._cached_at = 0

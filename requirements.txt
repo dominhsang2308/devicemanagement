@@ -9,3 +9,8 @@ python-dotenv
 python-dateutil
 pytest
 httpx
+apscheduler
+streamlit
+plotly
+streamlit_autorefresh
+streamlit-aggrid

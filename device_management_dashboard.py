@@ -17,7 +17,7 @@ API_BASE = st.secrets.get("api_base", "http://localhost:8000/api")
 AUTO_REFRESH_SEC = 60
 
 st.set_page_config(page_title="Devices & Inventory", layout="wide")
-st_autorefresh(interval=AUTO_REFRESH_SEC * 1000, key="auto_refresh")
+st_autorefresh(interval=AUTO_REFRESH_SEC * 1000, key="auto_refresh_dashboard")
 
 # -------------------------
 # Helpers
@@ -60,12 +60,6 @@ def get_history(limit=200):
 def post_json(path, payload):
     r = requests.post(f"{API_BASE}{path}", json=payload, timeout=20)
     return r
-
-# -------------------------
-# Layout: sidebar menu
-# -------------------------
-st.sidebar.title("Menu")
-page = st.sidebar.radio("Go to", ["Dashboard", "Inventory Management", "About"])
 
 # -------------------------
 # Page: Dashboard (Device Management)
@@ -169,12 +163,16 @@ def render_inventory():
                         "item_type": item_type,
                         "quantity": int(quantity),
                         "location": location,
-                        "metadata": {"notes": notes},
+                        "metadata_": {"notes": notes},
                     }
                     r = requests.post(f"{API_BASE}/inventory", json=payload, timeout=20)
                     if r.status_code in (200,201):
                         st.success("Item created")
-                        st.experimental_rerun()
+                        try:
+                            if hasattr(st, "experimental_rerun"):
+                                st.experimental_rerun()
+                        except Exception:
+                            pass
                     else:
                         st.error(f"Create failed: {r.status_code} {r.text}")
 
@@ -199,7 +197,11 @@ def render_inventory():
                     r = requests.post(f"{API_BASE}/inventory/licenses", json=payload, timeout=20)
                     if r.status_code in (200,201):
                         st.success("License pool created")
-                        st.experimental_rerun()
+                        try:
+                            if hasattr(st, "experimental_rerun"):
+                                st.experimental_rerun()
+                        except Exception:
+                            pass
                     else:
                         st.error(f"Error: {r.status_code} {r.text}")
 
@@ -279,12 +281,3 @@ def render_about():
     - For production, prefer Postgres (SQLite has concurrency limits).
     """)
 
-# -------------------------
-# Router
-# -------------------------
-if page == "Dashboard":
-    render_dashboard()
-elif page == "Inventory Management":
-    render_inventory()
-else:
-    render_about()

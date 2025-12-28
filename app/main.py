@@ -10,10 +10,12 @@ from .scheduler import start_scheduler
 from .snapshot_job import run_snapshot_once
 from app.inventory_routes import router as inventory_router
 from app.users_routes import router as users_router
+from app.laptop_routes import router as laptop_router
 load_dotenv()
 
 app = FastAPI(title="Device Management Summary API")
 app.include_router(inventory_router)
+app.include_router(laptop_router)
 app.include_router(users_router)
 @app.on_event("startup")
 def on_startup():
@@ -25,6 +27,15 @@ def dashboard_summary():
     devices = fetch_managed_devices()
     summary = summarize_devices(devices)
     return summary
+
+@app.get("/api/intune/devices")
+def get_intune_devices():
+    """Fetch devices directly from Microsoft Intune via Graph API"""
+    try:
+        devices = fetch_managed_devices()
+        return devices
+    except Exception as e:
+        return {"error": str(e), "devices": []}
 
 
 @app.post("/api/dashboard/snapshot")
