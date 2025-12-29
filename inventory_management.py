@@ -6,6 +6,8 @@ import plotly.express as px
 from datetime import datetime
 from streamlit_autorefresh import st_autorefresh
 from st_aggrid import AgGrid, GridOptionsBuilder, DataReturnMode, GridUpdateMode, JsCode
+import re
+import html as _html
 
 # Config
 API_BASE = st.secrets.get("api_base", "http://localhost:8000/api")
@@ -601,49 +603,40 @@ def render_inventory_page():
             
             grid_opts = gb.build()
             
-            # Render with custom CSS for dark theme
-            grid = AgGrid(
-                dfd,
-                gridOptions=grid_opts,
-                enable_enterprise_modules=False,
-                fit_columns_on_grid_load=False,
-                theme="streamlit",
-                key="devices_in_stock_grid",
-                height=600,
-                allow_unsafe_jscode=True,
-                update_mode=GridUpdateMode.SELECTION_CHANGED,
-                custom_css={
-                    ".ag-root-wrapper": {
-                        "border-radius": "8px",
-                        "border": "1px solid #404040"
-                    },
-                    ".ag-header": {
-                        "background-color": "#2d2d2d",
-                        "font-weight": "600"
-                    },
-                    ".ag-header-cell": {
-                        "padding": "12px 8px"
-                    },
-                    ".ag-row": {
-                        "border-bottom": "1px solid #333"
-                    },
-                    ".ag-row-hover": {
-                        "background-color": "#333333 !important"
-                    },
-                    ".ag-cell": {
-                        "display": "flex",
-                        "align-items": "center",
-                        "padding": "8px"
-                    }
-                }
-            )
+            # Sanitize object/text columns to strip any HTML (prevents broken span/html rendering)
+            dfd_clean = dfd.copy()
+            for c in dfd_clean.select_dtypes(include=["object"]).columns:
+                # keep metadata_ intact (it's structured) but convert to readable string if needed
+                if c == "metadata_":
+                    continue
+                dfd_clean[c] = dfd_clean[c].fillna("").astype(str).map(_strip_html)
             
-            sel_list = grid.get("selected_rows")
-            if sel_list is not None and not (isinstance(sel_list, pd.DataFrame) and sel_list.empty) and len(sel_list) > 0:
-                if isinstance(sel_list, pd.DataFrame):
-                    st.session_state["selected_device_in_stock"] = sel_list.iloc[0].to_dict()
-                else:
-                    st.session_state["selected_device_in_stock"] = sel_list[0]
+            # Hide heavy/structured columns from the quick table (but keep them in dfd_clean for detail view)
+            display_df = dfd_clean.copy()
+            if "metadata_" in display_df.columns:
+                display_df = display_df.drop(columns=["metadata_"])
+            
+            # Show clean dataframe (like Licenses tab)
+            st.dataframe(display_df, use_container_width=True)
+            
+            # Build labels -> index mapping for robust selection (works with non-integer indices)
+            labels = []
+            label_to_index = {}
+            for idx, row in dfd_clean.iterrows():
+                serial = row.get("serialNumber") or row.get("serial") or ""
+                model = row.get("model") or ""
+                label = f"{idx} | {serial} | {model}"
+                labels.append(label)
+                label_to_index[label] = idx
+            
+            if labels:
+                sel_label = st.selectbox("Select device (for details/actions)", options=labels)
+                sel_index = label_to_index.get(sel_label)
+                if sel_index is not None:
+                    # use sanitized row for details/actions
+                    st.session_state["selected_device_in_stock"] = dfd_clean.loc[sel_index].to_dict()
+            else:
+                st.session_state["selected_device_in_stock"] = None
             
             row = st.session_state.get("selected_device_in_stock")
             if row:
@@ -1071,4 +1064,15 @@ def render_about():
     - Inventory page includes CRUD, assignment, import/export, audit.
     - Protect mutating endpoints with API key or Azure AD in production.
     """)
+
+def _strip_html(text: str) -> str:
+    if text is None:
+        return ""
+    s = str(text)
+    s = _html.unescape(s)
+    # remove any HTML tags (handles unclosed tags too)
+    s = re.sub(r"<[^>]*>", "", s)
+    # collapse whitespace/newlines
+    s = re.sub(r"\s+", " ", s).strip()
+    return s
 
